@@ -1,7 +1,12 @@
 ﻿using System.Collections.Generic;
 using Model.Runtime.Projectiles;
 using UnityEngine;
+using System.Linq;
 using static UnityEngine.GraphicsBuffer;
+using Model;
+using UnityEditor;
+using Utilities;
+using UnityEngine.UIElements;
 
 namespace UnitBrains.Player
 {
@@ -13,6 +18,7 @@ namespace UnitBrains.Player
         private float _temperature = 0f;
         private float _cooldownTime = 0f;
         private bool _overheated;
+        private List<Vector2Int> TargetOutOfRange = new List<Vector2Int>();
         
         protected override void GenerateProjectiles(Vector2Int forTarget, List<BaseProjectile> intoList)
         {
@@ -35,7 +41,16 @@ namespace UnitBrains.Player
 
         public override Vector2Int GetNextStep()
         {
-            return base.GetNextStep();
+            Vector2Int position = unit.Pos;
+            if (TargetOutOfRange.Any())
+            {
+                foreach (var target in TargetOutOfRange)
+                {
+                    position = unit.Pos;
+                    position = position.CalcNextStepTowards(target);
+                }
+            }
+            return position;
         }
 
         protected override List<Vector2Int> SelectTargets()
@@ -43,7 +58,11 @@ namespace UnitBrains.Player
             ///////////////////////////////////////
             // Homework 1.4 (1st block, 4rd module)
             ///////////////////////////////////////
-            List<Vector2Int> result = GetReachableTargets();
+            IEnumerable<Vector2Int> resultAsIE = GetAllTargets();
+            List<Vector2Int> result;
+            result = resultAsIE.ToList();
+            Vector2Int enemyBase = runtimeModel.RoMap.Bases[IsPlayerUnitBrain ? RuntimeModel.BotPlayerId : RuntimeModel.PlayerId];
+
             float minDistance = float.MaxValue;
             Vector2Int enemy = new Vector2Int(0,0);
             foreach (var target in result)
@@ -54,8 +73,20 @@ namespace UnitBrains.Player
                     enemy = target;
                 }
             }
+
             result.Clear();
-            result.Add(enemy);
+            if (IsTargetInRange(enemy))
+                result.Add(enemy);
+            else
+                TargetOutOfRange.Add(enemy);
+
+            if (result == null && TargetOutOfRange == null)
+            {
+                if (IsTargetInRange(enemyBase))
+                    result.Add(enemyBase);
+                else
+                    TargetOutOfRange.Add(enemyBase);
+            }
             return result;
             ///////////////////////////////////////
 

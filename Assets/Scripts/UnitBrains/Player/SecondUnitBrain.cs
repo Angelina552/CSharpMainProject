@@ -19,7 +19,16 @@ namespace UnitBrains.Player
         private float _cooldownTime = 0f;
         private bool _overheated;
         private List<Vector2Int> TargetOutOfRange = new List<Vector2Int>();
+        private static int counter = 0;
+        private int unitNumber;
+        private static int maxTargets = 3;
         
+        public SecondUnitBrain()
+        {
+            UnitNumber = Counter;
+            Debug.Log($"New unit number {Counter}");
+            Counter++;
+        }
         protected override void GenerateProjectiles(Vector2Int forTarget, List<BaseProjectile> intoList)
         {
             float overheatTemperature = OverheatTemperature;
@@ -44,6 +53,7 @@ namespace UnitBrains.Player
             Vector2Int position = unit.Pos;
             if (TargetOutOfRange.Any())
             {
+                Debug.Log("Цели вне досягаемоссти " + TargetOutOfRange.Any());
                 foreach (var target in TargetOutOfRange)
                 {
                     position = unit.Pos;
@@ -60,33 +70,38 @@ namespace UnitBrains.Player
             ///////////////////////////////////////
             IEnumerable<Vector2Int> resultAsIE = GetAllTargets();
             List<Vector2Int> result;
-            result = resultAsIE.ToList();
+            Vector2Int enemy = new Vector2Int(0, 0);
             Vector2Int enemyBase = runtimeModel.RoMap.Bases[IsPlayerUnitBrain ? RuntimeModel.BotPlayerId : RuntimeModel.PlayerId];
 
-            float minDistance = float.MaxValue;
-            Vector2Int enemy = new Vector2Int(0,0);
-            foreach (var target in result)
-            {
-                if (minDistance > DistanceToOwnBase(target))
-                {
-                    minDistance = DistanceToOwnBase(target);
-                    enemy = target;
-                }
-            }
+            result = resultAsIE.ToList();
 
+            if (!result.Any())
+                result.Add(enemyBase);
+
+            SortByDistanceToOwnBase(result);
+
+            if (result.Count() > MaxTargets)
+            {
+                if (UnitNumber > MaxTargets)
+                    enemy = result[MaxTargets];
+                else
+                    enemy = result[UnitNumber - 1];
+            }
+            else
+            {
+                if (UnitNumber > result.Count())
+                    enemy = result[result.Count()];
+                else
+                    enemy = result[UnitNumber - 1];
+            }
+            
             result.Clear();
+
             if (IsTargetInRange(enemy))
                 result.Add(enemy);
             else
                 TargetOutOfRange.Add(enemy);
 
-            if (result == null && TargetOutOfRange == null)
-            {
-                if (IsTargetInRange(enemyBase))
-                    result.Add(enemyBase);
-                else
-                    TargetOutOfRange.Add(enemyBase);
-            }
             return result;
             ///////////////////////////////////////
 
@@ -118,5 +133,9 @@ namespace UnitBrains.Player
             _temperature += 1f;
             if (_temperature >= OverheatTemperature) _overheated = true;
         }
+
+        public static int Counter { get; private set; }
+        public int UnitNumber { get; private set; }
+        public static int MaxTargets { get; private set; }
     }
 }

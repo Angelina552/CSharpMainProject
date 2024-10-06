@@ -53,7 +53,6 @@ namespace UnitBrains.Player
             Vector2Int position = unit.Pos;
             if (TargetOutOfRange.Any())
             {
-                Debug.Log("Цели вне досягаемоссти " + TargetOutOfRange.Any());
                 foreach (var target in TargetOutOfRange)
                 {
                     position = unit.Pos;
